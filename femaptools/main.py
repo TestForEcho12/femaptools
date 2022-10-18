@@ -59,8 +59,7 @@ class FemapTools:
         [_, _, entityList] = feSet.GetArray()
         return entityList
     
-    def _get_results(self, outputSet, vectors, entitySet, entityTypeID, transform=''):
-        
+    def _get_results(self, outputSet, vectors, entitySet, entityTypeID, **kwargs):
         '''
         Parameters
         ----------
@@ -73,8 +72,7 @@ class FemapTools:
         entityTypeID : Integer
             Femap API Entity Type (Reference Section 3.3.6 of Femap API 
             Documentation).
-        transform : String, optional
-                - '': the default
+        **transform : String, optional
                 - 'Nodal': transform nodal results to the node's output CSys
 
         Returns
@@ -83,9 +81,9 @@ class FemapTools:
             Dataframe containing the results. Columns are:
                 - 'id': Entity ID
                 - 'set': output set
-                - [vector id]: additional columns are the output vector ids
+                - [vector id]: columns are the output vector ids
         '''
-        
+        transform = kwargs.get('transform')
         results = []
         output = self.app.feResults
         [_, _, outputIDs] = outputSet.GetArray()
@@ -100,7 +98,7 @@ class FemapTools:
             
             for vect in vectors:
                 [_, _, _] = output.AddColumnV2(set_id, vect, False)
-            if transform == 'Nodal':
+            if transform == 'nodal':
                 _ = output.SetNodalTransform(2, 0)
             _ = output.Populate()   
             [_, dVals, _] = output.GetRowsAndColumnsByID(entitySetID, nVectors, columnIndex)
@@ -113,21 +111,21 @@ class FemapTools:
     
     def get_element_results(self, outputSet, elementSet, vectors):
         '''
-        outputSet = Femap set including output sets
-        elementSet = Femap set including elements
+        outputSet = Femap set including output set ids
+        elementSet = Femap set including element ids
         vectors = List of output vector ids
         '''
         return self._get_results(outputSet, vectors, elementSet, 8)
             
     def get_node_results(self, outputSet, nodeSet, vectors, transform=False):
         '''
-        outputSet = Femap set including output sets
-        nodeSet = Femap set including nodes
+        outputSet = Femap set including output set ids
+        nodeSet = Femap set including node ids
         vectors = List of output vector ids
         transform = Boolian to transform results to output CSys
         '''
-        tsfm = 'Nodal' if transform else ''
-        return self._get_results(outputSet, vectors, nodeSet, 7, tsfm)
+        tsfm = 'nodal' if transform else ''
+        return self._get_results(outputSet, vectors, nodeSet, 7, transform=tsfm)
     
     def get_dict_of_properties_from_element_set(self, elementSet):
         element = self.app.feElem
@@ -152,3 +150,9 @@ class FemapTools:
             [_, _, _, dSetValue] = output.SetInfo(setID)
             frequencies[setID] = dSetValue
         return frequencies
+    
+    def delete_output(self):
+        self.app.feDeleteAll(False, False, True, True)
+    
+    def import_output(self, output_path):
+        self.app.feFileReadNastranResults(0, output_path)
